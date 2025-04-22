@@ -21,6 +21,7 @@ mod gateway;
 mod general;
 mod genesis;
 mod manipulations;
+pub mod nomos_da;
 mod object_store;
 pub mod portal;
 mod raw;

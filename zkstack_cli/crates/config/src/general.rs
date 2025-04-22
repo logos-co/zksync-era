@@ -8,6 +8,7 @@ use zksync_basic_types::pubdata_da::PubdataSendingMode;
 use crate::{
     consensus::{ConsensusConfigPatch, ConsensusGenesisSpecs},
     da::AvailConfig,
+    nomos_da::NomosDaConfig,
     raw::{PatchedConfig, RawConfig},
     ChainConfig, ObjectStoreConfig, ObjectStoreMode,
 };
@@ -247,6 +248,10 @@ impl GeneralConfigPatch {
 
     pub fn set_avail_client(&mut self, client: &AvailConfig) -> anyhow::Result<()> {
         self.0.insert_yaml("da_client.avail", client)
+    }
+
+    pub fn set_nomos_client(&mut self, nomos_config: &NomosDaConfig) -> anyhow::Result<()> {
+        self.0.insert_yaml("da_client.nomos", nomos_config)
     }
 
     fn set_object_store(&mut self, prefix: &str, config: &ObjectStoreConfig) -> anyhow::Result<()> {
