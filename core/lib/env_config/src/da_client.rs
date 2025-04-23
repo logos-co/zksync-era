@@ -82,7 +82,6 @@ pub fn da_client_config_from_env(prefix: &str) -> anyhow::Result<DAClientConfig>
         OBJECT_STORE_CLIENT_CONFIG_NAME => {
             DAClientConfig::ObjectStore(envy_load("da_object_store", prefix)?)
         }
-        NO_DA_CLIENT_CONFIG_NAME => DAClientConfig::NoDA,
         _ => anyhow::bail!("Unknown DA client name: {}", client_tag),
     };
 

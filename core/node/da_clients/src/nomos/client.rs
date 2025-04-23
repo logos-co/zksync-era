@@ -21,8 +21,8 @@ pub struct MetaData {
 
 #[derive(Debug, Clone)]
 pub struct NomosDaClient {
-    config: NomosDaConfig,
     client: reqwest::Client,
+    config: NomosDaConfig,
     secrets: NomosSecrets,
 }
 

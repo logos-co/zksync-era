@@ -73,6 +73,7 @@ pub enum DAValidatorType {
     Rollup = 0,
     NoDA = 1,
     Avail = 2,
+    Nomos = 3,
 }
 
 impl Serialize for ChainConfig {
