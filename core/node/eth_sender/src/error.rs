@@ -9,6 +9,8 @@ pub enum EthSenderError {
     ContractCall(#[from] ContractCallError),
     #[error("Token parsing error: {0}")]
     Parse(#[from] contract::Error),
+    #[error("DA error: {0}")]
+    DaError(Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl EthSenderError {

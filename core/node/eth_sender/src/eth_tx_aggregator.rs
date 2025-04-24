@@ -1,9 +1,23 @@
+use super::aggregated_operations::AggregatedOperation;
+use crate::{
+    aggregator::OperationSkippingRestrictions,
+    health::{EthTxAggregatorHealthDetails, EthTxDetails},
+    metrics::{PubdataKind, METRICS},
+    publish_criterion::L1GasCriterion,
+    zksync_functions::ZkSyncFunctions,
+    Aggregator, EthSenderError,
+};
+use serde::{Deserialize, Serialize};
 use tokio::sync::watch;
+use zksync_config::configs::da_client::nomos::{NomosDaConfig, NomosSecrets};
 use zksync_config::configs::eth_sender::SenderConfig;
 use zksync_contracts::BaseSystemContractsHashes;
+use zksync_da_client::DataAvailabilityClient;
+use zksync_da_clients::nomos::client::NomosDaClient;
 use zksync_dal::{Connection, ConnectionPool, Core, CoreDal};
 use zksync_eth_client::{BoundEthInterface, CallFunctionArgs, ContractCallError, EthInterface};
 use zksync_health_check::{Health, HealthStatus, HealthUpdater, ReactiveHealthCheck};
+use zksync_l1_contract_interface::i_executor::methods::ProveBatches;
 use zksync_l1_contract_interface::{
     i_executor::{
         commit::kzg::{KzgInfo, ZK_SYNC_BYTES_PER_BLOB},
@@ -12,6 +26,7 @@ use zksync_l1_contract_interface::{
     multicall3::{Multicall3Call, Multicall3Result},
     Tokenizable, Tokenize,
 };
+use zksync_prover_interface::outputs::L1BatchProofForL1;
 use zksync_shared_metrics::BlockL1Stage;
 use zksync_types::{
     aggregated_operations::AggregatedActionType,
@@ -23,17 +38,7 @@ use zksync_types::{
     pubdata_da::PubdataSendingMode,
     settlement::SettlementLayer,
     web3::{contract::Error as Web3ContractError, BlockNumber, CallRequest},
-    Address, L2ChainId, ProtocolVersionId, SLChainId, H256, U256,
-};
-
-use super::aggregated_operations::AggregatedOperation;
-use crate::{
-    aggregator::OperationSkippingRestrictions,
-    health::{EthTxAggregatorHealthDetails, EthTxDetails},
-    metrics::{PubdataKind, METRICS},
-    publish_criterion::L1GasCriterion,
-    zksync_functions::ZkSyncFunctions,
-    Aggregator, EthSenderError,
+    Address, L1BatchNumber, L2ChainId, ProtocolVersionId, SLChainId, H256, U256,
 };
 
 #[derive(Debug, PartialEq)]
@@ -66,6 +71,8 @@ pub struct EthTxAggregator {
     aggregator: Aggregator,
     eth_client: Box<dyn BoundEthInterface>,
     config: SenderConfig,
+    da_config: Option<NomosDaConfig>,
+    da_secrets: Option<NomosSecrets>,
     config_timelock_contract_address: Address,
     l1_multicall3_address: Address,
     pub(super) state_transition_chain_contract: Address,
@@ -126,8 +133,29 @@ impl EthTxAggregator {
 
         let sl_chain_id = (*eth_client).as_ref().fetch_chain_id().await.unwrap();
 
+        let (da_config, da_secrets) = match (
+            std::env::var("PROOF_NOMOS_DA_APP_ID"),
+            std::env::var("PROOF_NOMOS_DA_RPC"),
+            std::env::var("PROOF_NOMOS_DA_USERNAME"),
+            std::env::var("PROOF_NOMOS_DA_PASSWORD"),
+        ) {
+            (Ok(app_id), Ok(rpc), Ok(username), Ok(password)) => {
+                tracing::info!("Nomos DA client for posting proofs is configured: {rpc} {app_id}");
+                (
+                    Some(NomosDaConfig { app_id, rpc }),
+                    Some(NomosSecrets { username, password }),
+                )
+            }
+            _ => {
+                tracing::info!("Nomos DA client for posting proofs is not configured");
+                (None, None)
+            }
+        };
+
         Self {
             config,
+            da_config,
+            da_secrets,
             aggregator,
             eth_client,
             config_timelock_contract_address,
@@ -615,6 +643,13 @@ impl EthTxAggregator {
             )
             .await?
         {
+            // Post the proof to DA
+            if let AggregatedOperation::PublishProofOnchain(prove_batches) = &agg_op {
+                self.dispatch_proof_to_da(prove_batches)
+                    .await
+                    .map_err(|e| EthSenderError::DaError(e.into()))?;
+            }
+
             let is_gateway = self.settlement_layer.is_gateway();
             let tx = self
                 .save_eth_tx(
@@ -918,6 +953,33 @@ impl EthTxAggregator {
             })
             .unwrap_or(GatewayMigrationState::NotInProgress)
     }
+
+    async fn dispatch_proof_to_da(&self, prove_batches: &ProveBatches) -> anyhow::Result<()> {
+        if let (Some(config), Some(secrets)) = (&self.da_config, &self.da_secrets) {
+            tracing::info!("Posting proof to DA");
+            let da_client = NomosDaClient::new(config.clone(), secrets.clone())?;
+
+            for (l1_batch, proof) in prove_batches
+                .l1_batches
+                .iter()
+                .zip(prove_batches.proofs.iter())
+            {
+                tracing::info!(
+                    "Posting proof for L1 batch {} to DA",
+                    l1_batch.header.number
+                );
+                let blob = ProofDaBlob {
+                    batch_number: l1_batch.header.number,
+                    proof: proof.clone(),
+                };
+                let _ = da_client
+                    .dispatch_blob(blob.batch_number.0, bincode::serialize(&blob)?)
+                    .await?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 async fn query_contract(
@@ -975,4 +1037,10 @@ async fn get_priority_tree_start_index(
         .unwrap();
 
     Ok(Some(priority_tree_start_index.as_usize()))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ProofDaBlob {
+    batch_number: L1BatchNumber,
+    proof: L1BatchProofForL1,
 }
