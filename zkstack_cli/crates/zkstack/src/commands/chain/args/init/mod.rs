@@ -8,7 +8,7 @@ use zkstack_cli_types::{L1BatchCommitmentMode, L1Network};
 use crate::{
     commands::chain::args::{
         genesis::{GenesisArgs, GenesisArgsFinal},
-        init::da_configs::ValidiumType,
+        init::da_configs::{ValidiumType, ValidiumTypeInternal},
     },
     defaults::LOCAL_RPC_URL,
     messages::{
@@ -99,6 +99,9 @@ impl InitArgs {
                     "Avail is not supported via CLI args, use interactive mode" // TODO: Add support for configuration via CLI args
                 ),
                 Some(da_configs::ValidiumTypeInternal::EigenDA) => Some(ValidiumType::EigenDA),
+                Some(ValidiumTypeInternal::Nomos) => {
+                    panic!("Nomos is not supported via CLI args, use interactive mode")
+                }
             },
             _ => None,
         };

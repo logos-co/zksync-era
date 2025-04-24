@@ -76,6 +76,9 @@ pub async fn init_configs(
         Some(ValidiumType::Avail((avail_config, _))) => {
             general_config.set_avail_client(avail_config)?;
         }
+        Some(ValidiumType::Nomos((nomos_config, _))) => {
+            general_config.set_nomos_client(nomos_config)?;
+        }
     }
     general_config.save().await?;
 
@@ -104,6 +107,9 @@ pub async fn init_configs(
         None | Some(ValidiumType::NoDA) | Some(ValidiumType::EigenDA) => { /* Do nothing */ }
         Some(ValidiumType::Avail((_, avail_secrets))) => {
             secrets.set_avail_secrets(avail_secrets)?;
+        }
+        Some(ValidiumType::Nomos((_, nomos_secrets))) => {
+            secrets.set_nomos_secrets(nomos_secrets)?;
         }
     }
     secrets.save().await?;

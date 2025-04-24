@@ -59,6 +59,11 @@ message EigenConfig {
   reserved "rpc_node_url","inclusion_polling_interval_ms";
 }
 
+message NomosConfig {
+  optional string rpc = 1;
+  optional string app_id = 2;
+}
+
 message NoDAConfig {}
 
 message DataAvailabilityClient {
@@ -69,5 +74,6 @@ message DataAvailabilityClient {
     CelestiaConfig celestia = 3;
     EigenConfig eigen = 4;
     NoDAConfig no_da = 5;
+    NomosConfig nomos = 6;
   }
 }

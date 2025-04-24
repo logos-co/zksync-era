@@ -8,7 +8,9 @@ use zksync_basic_types::{
 };
 use zksync_config::configs::{
     consensus::{AttesterSecretKey, ConsensusSecrets, NodeSecretKey, ValidatorSecretKey},
-    da_client::{avail::AvailSecrets, celestia::CelestiaSecrets, eigen::EigenSecrets},
+    da_client::{
+        avail::AvailSecrets, celestia::CelestiaSecrets, eigen::EigenSecrets, nomos::NomosSecrets,
+    },
     secrets::{DataAvailabilitySecrets, Secrets},
     ContractVerifierSecrets, DatabaseSecrets, L1Secrets,
 };
@@ -148,6 +150,10 @@ impl ProtoRepr for proto::DataAvailabilitySecrets {
                         .as_str(),
                 ),
             }),
+            DaSecrets::Nomos(nomos) => DataAvailabilitySecrets::Nomos(NomosSecrets {
+                username: required(&nomos.username).context("username")?.to_string(),
+                password: required(&nomos.password).context("password")?.to_string(),
+            }),
         };
 
         Ok(client)
@@ -196,6 +202,10 @@ impl ProtoRepr for proto::DataAvailabilitySecrets {
             }
             DataAvailabilitySecrets::Eigen(config) => Some(DaSecrets::Eigen(proto::EigenSecret {
                 private_key: Some(config.private_key.0.expose_secret().to_string()),
+            })),
+            DataAvailabilitySecrets::Nomos(config) => Some(DaSecrets::Nomos(proto::NomosSecret {
+                username: Some(config.username.clone()),
+                password: Some(config.password.clone()),
             })),
         };
 

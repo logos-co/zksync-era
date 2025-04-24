@@ -1,14 +1,18 @@
 use std::str::FromStr;
 
 use anyhow::Context;
-use zksync_config::configs::{
-    self,
-    da_client::{
-        avail::{AvailClientConfig, AvailConfig, AvailDefaultConfig, AvailGasRelayConfig},
-        celestia::CelestiaConfig,
-        eigen::EigenConfig,
-        DAClientConfig::{Avail, Celestia, Eigen, NoDA, ObjectStore},
+use zksync_config::{
+    configs::{
+        self,
+        da_client::{
+            avail::{AvailClientConfig, AvailConfig, AvailDefaultConfig, AvailGasRelayConfig},
+            celestia::CelestiaConfig,
+            eigen::EigenConfig,
+            nomos::NomosDaConfig,
+            DAClientConfig::{Avail, Celestia, Eigen, NoDA, ObjectStore},
+        },
     },
+    DAClientConfig,
 };
 use zksync_protobuf::{required, ProtoRepr};
 use zksync_types::url::SensitiveUrl;
@@ -107,6 +111,12 @@ impl ProtoRepr for proto::DataAvailabilityClient {
             proto::data_availability_client::Config::ObjectStore(conf) => {
                 ObjectStore(object_store_proto::ObjectStore::read(conf)?)
             }
+            proto::data_availability_client::Config::Nomos(conf) => {
+                DAClientConfig::Nomos(NomosDaConfig {
+                    app_id: required(&conf.app_id).context("app_id")?.clone(),
+                    rpc: required(&conf.rpc).context("rpc")?.clone(),
+                })
+            }
             proto::data_availability_client::Config::NoDa(_) => NoDA,
         };
 
@@ -181,6 +191,12 @@ impl ProtoRepr for proto::DataAvailabilityClient {
                 object_store_proto::ObjectStore::build(config),
             ),
             NoDA => proto::data_availability_client::Config::NoDa(proto::NoDaConfig {}),
+            DAClientConfig::Nomos(config) => {
+                proto::data_availability_client::Config::Nomos(proto::NomosConfig {
+                    rpc: Some(config.rpc.clone()),
+                    app_id: Some(config.app_id.clone()),
+                })
+            }
         };
 
         Self {

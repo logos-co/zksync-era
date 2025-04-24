@@ -585,3 +585,7 @@ pub(super) const MSG_AVAIL_BRIDGE_API_URL_PROMPT: &str = "Attestation bridge API
 pub(super) const MSG_AVAIL_SEED_PHRASE_PROMPT: &str = "Seed phrase";
 pub(super) const MSG_AVAIL_GAS_RELAY_API_KEY_PROMPT: &str = "Gas relay API key";
 pub(super) const MSG_INVALID_URL_ERR: &str = "Invalid URL format";
+pub(super) const MSG_NOMOS_DA_RPC_URL: &str = "Nomos DA URL";
+pub(super) const MSG_NOMOS_DA_APP_ID: &str = "Nomos DA app ID";
+pub(super) const MSG_NOMOS_DA_RPC_USERNAME: &str = "Nomos DA username";
+pub(super) const MSG_NOMOS_DA_RPC_PASSWORD: &str = "Nomos DA password";
