@@ -1,27 +1,19 @@
-use super::aggregated_operations::AggregatedOperation;
-use crate::{
-    aggregator::OperationSkippingRestrictions,
-    health::{EthTxAggregatorHealthDetails, EthTxDetails},
-    metrics::{PubdataKind, METRICS},
-    publish_criterion::L1GasCriterion,
-    zksync_functions::ZkSyncFunctions,
-    Aggregator, EthSenderError,
-};
 use serde::{Deserialize, Serialize};
 use tokio::sync::watch;
-use zksync_config::configs::da_client::nomos::{NomosDaConfig, NomosSecrets};
-use zksync_config::configs::eth_sender::SenderConfig;
+use zksync_config::configs::{
+    da_client::nomos::{NomosDaConfig, NomosSecrets},
+    eth_sender::SenderConfig,
+};
 use zksync_contracts::BaseSystemContractsHashes;
 use zksync_da_client::DataAvailabilityClient;
 use zksync_da_clients::nomos::client::NomosDaClient;
 use zksync_dal::{Connection, ConnectionPool, Core, CoreDal};
 use zksync_eth_client::{BoundEthInterface, CallFunctionArgs, ContractCallError, EthInterface};
 use zksync_health_check::{Health, HealthStatus, HealthUpdater, ReactiveHealthCheck};
-use zksync_l1_contract_interface::i_executor::methods::ProveBatches;
 use zksync_l1_contract_interface::{
     i_executor::{
         commit::kzg::{KzgInfo, ZK_SYNC_BYTES_PER_BLOB},
-        methods::CommitBatches,
+        methods::{CommitBatches, ProveBatches},
     },
     multicall3::{Multicall3Call, Multicall3Result},
     Tokenizable, Tokenize,
@@ -39,6 +31,16 @@ use zksync_types::{
     settlement::SettlementLayer,
     web3::{contract::Error as Web3ContractError, BlockNumber, CallRequest},
     Address, L1BatchNumber, L2ChainId, ProtocolVersionId, SLChainId, H256, U256,
+};
+
+use super::aggregated_operations::AggregatedOperation;
+use crate::{
+    aggregator::OperationSkippingRestrictions,
+    health::{EthTxAggregatorHealthDetails, EthTxDetails},
+    metrics::{PubdataKind, METRICS},
+    publish_criterion::L1GasCriterion,
+    zksync_functions::ZkSyncFunctions,
+    Aggregator, EthSenderError,
 };
 
 #[derive(Debug, PartialEq)]
@@ -136,13 +138,18 @@ impl EthTxAggregator {
         let (da_config, da_secrets) = match (
             std::env::var("PROOF_NOMOS_DA_APP_ID"),
             std::env::var("PROOF_NOMOS_DA_RPC"),
+            std::env::var("PROOF_NOMOS_DA_VALIDATOR_RPCS"),
             std::env::var("PROOF_NOMOS_DA_USERNAME"),
             std::env::var("PROOF_NOMOS_DA_PASSWORD"),
         ) {
-            (Ok(app_id), Ok(rpc), Ok(username), Ok(password)) => {
+            (Ok(app_id), Ok(rpc), Ok(validator_rpcs), Ok(username), Ok(password)) => {
                 tracing::info!("Nomos DA client for posting proofs is configured: {rpc} {app_id}");
                 (
-                    Some(NomosDaConfig { app_id, rpc }),
+                    Some(NomosDaConfig {
+                        app_id,
+                        executor_rpc: rpc,
+                        validator_rpcs,
+                    }),
                     Some(NomosSecrets { username, password }),
                 )
             }

@@ -57,3 +57,9 @@ pbjson-types.workspace = true
 
 # Eigen dependencies
 rust-eigenda-client.workspace = true
+
+# Nomos dependencies
+futures-util = { workspace = true }
+const-hex = "1"
+indexmap = { version = "1.9", features = ["serde"] }
+thiserror.workspace = true

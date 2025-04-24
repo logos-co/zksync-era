@@ -2,7 +2,8 @@ use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct NomosDaConfig {
-    pub rpc: String,
+    pub executor_rpc: String,
+    pub validator_rpcs: String,
     pub app_id: String,
 }
 

@@ -60,8 +60,9 @@ message EigenConfig {
 }
 
 message NomosConfig {
-  optional string rpc = 1;
-  optional string app_id = 2;
+  optional string executor_rpc = 1;
+  optional string validator_rpcs = 2;
+  optional string app_id = 3;
 }
 
 message NoDAConfig {}

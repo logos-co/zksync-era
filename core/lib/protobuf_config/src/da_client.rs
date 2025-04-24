@@ -114,7 +114,12 @@ impl ProtoRepr for proto::DataAvailabilityClient {
             proto::data_availability_client::Config::Nomos(conf) => {
                 DAClientConfig::Nomos(NomosDaConfig {
                     app_id: required(&conf.app_id).context("app_id")?.clone(),
-                    rpc: required(&conf.rpc).context("rpc")?.clone(),
+                    executor_rpc: required(&conf.executor_rpc)
+                        .context("executor_rpc")?
+                        .clone(),
+                    validator_rpcs: required(&conf.validator_rpcs)
+                        .context("validator_rpcs")?
+                        .clone(),
                 })
             }
             proto::data_availability_client::Config::NoDa(_) => NoDA,
@@ -193,7 +198,8 @@ impl ProtoRepr for proto::DataAvailabilityClient {
             NoDA => proto::data_availability_client::Config::NoDa(proto::NoDaConfig {}),
             DAClientConfig::Nomos(config) => {
                 proto::data_availability_client::Config::Nomos(proto::NomosConfig {
-                    rpc: Some(config.rpc.clone()),
+                    executor_rpc: Some(config.executor_rpc.clone()),
+                    validator_rpcs: Some(config.validator_rpcs.clone()),
                     app_id: Some(config.app_id.clone()),
                 })
             }

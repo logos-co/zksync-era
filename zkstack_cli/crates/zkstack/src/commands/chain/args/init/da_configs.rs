@@ -16,8 +16,8 @@ use crate::{
         MSG_AVAIL_FINALITY_STATE_PROMPT, MSG_AVAIL_GAS_RELAY_API_KEY_PROMPT,
         MSG_AVAIL_GAS_RELAY_API_URL_PROMPT, MSG_AVAIL_GAS_RELAY_MAX_RETRIES_PROMPT,
         MSG_AVAIL_SEED_PHRASE_PROMPT, MSG_INVALID_URL_ERR, MSG_NOMOS_DA_APP_ID,
-        MSG_NOMOS_DA_RPC_PASSWORD, MSG_NOMOS_DA_RPC_URL, MSG_NOMOS_DA_RPC_USERNAME,
-        MSG_VALIDIUM_TYPE_PROMPT,
+        MSG_NOMOS_DA_EXECUTOR_RPC_URL, MSG_NOMOS_DA_RPC_PASSWORD, MSG_NOMOS_DA_RPC_USERNAME,
+        MSG_NOMOS_DA_VALIDATOR_RPCS_URL, MSG_VALIDIUM_TYPE_PROMPT,
     },
 };
 
@@ -141,9 +141,12 @@ impl ValidiumType {
             }
             ValidiumTypeInternal::Nomos => {
                 let nomos_config = NomosDaConfig {
-                    rpc: Prompt::new(MSG_NOMOS_DA_RPC_URL)
+                    executor_rpc: Prompt::new(MSG_NOMOS_DA_EXECUTOR_RPC_URL)
                         .default(NOMOS_DA_RPC_URL.as_str())
                         .validate_with(url_validator)
+                        .ask(),
+                    validator_rpcs: Prompt::new(MSG_NOMOS_DA_VALIDATOR_RPCS_URL)
+                        .default(NOMOS_DA_RPC_URL.as_str())
                         .ask(),
                     app_id: Prompt::new(MSG_NOMOS_DA_APP_ID).ask(),
                 };
