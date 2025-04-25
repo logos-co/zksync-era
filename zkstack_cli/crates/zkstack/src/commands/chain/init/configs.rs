@@ -70,7 +70,10 @@ pub async fn init_configs(
     set_genesis_specs(&mut general_config, chain_config, &consensus_keys)?;
 
     match &init_args.validium_config {
-        None | Some(ValidiumType::NoDA) | Some(ValidiumType::EigenDA) => {
+        Some(ValidiumType::NoDA) => {
+            general_config.set_no_da_client()?;
+        }
+        None | Some(ValidiumType::EigenDA) => {
             general_config.remove_da_client();
         }
         Some(ValidiumType::Avail((avail_config, _))) => {
