@@ -219,16 +219,31 @@ impl RequestProcessor {
         Path(l1_batch_number): Path<u32>,
         Json(payload): Json<SubmitProofRequest>,
     ) -> Result<Json<SubmitProofResponse>, RequestProcessorError> {
-        tracing::info!("Received proof for block number: {:?}", l1_batch_number);
+        tracing::info!(
+            "SPLIT: Received proof for block number: {:?}",
+            l1_batch_number
+        );
         let l1_batch_number = L1BatchNumber(l1_batch_number);
         match payload {
             SubmitProofRequest::Proof(proof) => {
+                tracing::info!(
+                    "SPLIT: The received payload is the Proof type: Batch:{:?}",
+                    l1_batch_number
+                );
                 let proof: L1BatchProofForL1 = (*proof).into();
+                tracing::info!(
+                    "SPLIT: Putting proof to the blob store: Batch:{:?}",
+                    l1_batch_number
+                );
                 let blob_url = self
                     .blob_store
                     .put((l1_batch_number, proof.protocol_version()), &proof)
                     .await
                     .map_err(RequestProcessorError::ObjectStore)?;
+                tracing::info!(
+                    "SPLIT: Successfully put proof to the blob store: Batch:{:?}",
+                    l1_batch_number
+                );
 
                 let aggregation_coords = proof.aggregation_result_coords();
 
@@ -240,12 +255,20 @@ impl RequestProcessor {
 
                 let mut storage = self.pool.connection().await.unwrap();
 
+                tracing::info!(
+                    "SPLIT: Getting the L1 batch metadata from DB: Batch:{:?}",
+                    l1_batch_number
+                );
                 let l1_batch = storage
                     .blocks_dal()
                     .get_l1_batch_metadata(l1_batch_number)
                     .await
                     .unwrap()
                     .expect("Proved block without metadata");
+                tracing::info!(
+                    "SPLIT: Successfully got the L1 batch metadata from DB: Batch:{:?}",
+                    l1_batch_number
+                );
 
                 let protocol_version = l1_batch
                     .header
@@ -304,13 +327,27 @@ impl RequestProcessor {
                     );
                 }
 
+                tracing::info!(
+                    "SPLIT: Saving proof artifacts metadata to DB: Batch:{:?}, blob_url:{:?}",
+                    l1_batch_number,
+                    blob_url,
+                );
                 storage
                     .proof_generation_dal()
                     .save_proof_artifacts_metadata(l1_batch_number, &blob_url)
                     .await
                     .map_err(RequestProcessorError::Dal)?;
+                tracing::info!(
+                    "SPLIT: Successfully saved proof artifacts metadata to DB: Batch:{:?}, blob_url:{:?}",
+                    l1_batch_number,
+                    blob_url,
+                );
             }
             SubmitProofRequest::SkippedProofGeneration => {
+                tracing::info!(
+                    "SPLIT: The received payload is the SkippedProofGeneration type: Batch:{:?}",
+                    l1_batch_number
+                );
                 self.pool
                     .connection()
                     .await

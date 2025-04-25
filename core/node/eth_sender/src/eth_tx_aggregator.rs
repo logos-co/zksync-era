@@ -534,6 +534,7 @@ impl EthTxAggregator {
         &mut self,
         storage: &mut Connection<'_, Core>,
     ) -> Result<(), EthSenderError> {
+        tracing::info!("SPLIT: Starting the loop iteration");
         let gateway_migration_state = self.gateway_status(storage).await;
         let MulticallData {
             base_system_contracts_hashes,
@@ -603,6 +604,7 @@ impl EthTxAggregator {
             op_restrictions.execute_restriction = reason;
         }
 
+        tracing::info!("SPLIT: Trying to get a next ready operation");
         if let Some(agg_op) = self
             .aggregator
             .get_next_ready_operation(
@@ -615,7 +617,9 @@ impl EthTxAggregator {
             )
             .await?
         {
+            tracing::info!("SPLIT: Successfully got a next ready operation");
             let is_gateway = self.settlement_layer.is_gateway();
+            tracing::info!("SPLIT: Saving the eth tx to DB");
             let tx = self
                 .save_eth_tx(
                     storage,
@@ -629,7 +633,10 @@ impl EthTxAggregator {
                     is_gateway,
                 )
                 .await?;
+            tracing::info!("SPLIT: Successfully saved the eth tx to DB");
+            tracing::info!("SPLIT: Reporting the eth tx saving");
             Self::report_eth_tx_saving(storage, &agg_op, &tx).await;
+            tracing::info!("SPLIT: Successfully reported the eth tx saving");
 
             self.health_updater.update(
                 EthTxAggregatorHealthDetails {
@@ -637,6 +644,8 @@ impl EthTxAggregator {
                 }
                 .into(),
             );
+        } else {
+            tracing::info!("SPLIT: No next ready operation");
         }
         Ok(())
     }

@@ -208,15 +208,24 @@ impl Aggregator {
         restrictions: OperationSkippingRestrictions,
         priority_tree_start_index: Option<usize>,
     ) -> Result<Option<AggregatedOperation>, EthSenderError> {
+        tracing::info!("SPLIT: Getting the last sealed L1 batch number from DB");
         let Some(last_sealed_l1_batch_number) = storage
             .blocks_dal()
             .get_sealed_l1_batch_number()
             .await
             .unwrap()
         else {
+            tracing::info!("SPLIT: No L1 batches in Postgres; no operations are ready yet");
             return Ok(None); // No L1 batches in Postgres; no operations are ready yet
         };
-
+        tracing::info!(
+            "SPLIT: Got the last sealed L1 batch number from DB: Batch:{:?}",
+            last_sealed_l1_batch_number
+        );
+        tracing::info!(
+            "SPLIT: Getting an operation from DB: Batch:{:?}",
+            last_sealed_l1_batch_number
+        );
         if let Some(op) = restrictions.filter_execute_op(
             self.get_execute_operations(
                 storage,
@@ -226,13 +235,25 @@ impl Aggregator {
             )
             .await?,
         ) {
+            tracing::info!(
+                "SPLIT: Got a EXECUTE operation from DB: Batch:{:?}",
+                last_sealed_l1_batch_number
+            );
             Ok(Some(op))
         } else if let Some(op) = restrictions.filter_prove_op(
             self.get_proof_operation(storage, last_sealed_l1_batch_number, l1_verifier_config)
                 .await,
         ) {
+            tracing::info!(
+                "SPLIT: Got a PROOF operation from DB: Batch:{:?}",
+                last_sealed_l1_batch_number
+            );
             Ok(Some(op))
         } else {
+            tracing::info!(
+                "SPLIT: No EXECUTE or PROOF operation. Trying to get a COMMIT operation from DB: Batch:{:?}",
+                last_sealed_l1_batch_number
+            );
             Ok(restrictions.filter_commit_op(
                 self.get_commit_operation(
                     storage,
