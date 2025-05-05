@@ -3,18 +3,21 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, IntoEnumIterator};
 use url::Url;
 use zkstack_cli_common::{Prompt, PromptSelect};
-use zkstack_cli_config::da::{
-    AvailClientConfig, AvailConfig, AvailDefaultConfig, AvailGasRelayConfig, AvailSecrets,
+use zkstack_cli_config::{
+    da::{AvailClientConfig, AvailConfig, AvailDefaultConfig, AvailGasRelayConfig, AvailSecrets},
+    nomos_da::{NomosDaConfig, NomosSecrets},
 };
 
 use crate::{
-    defaults::{AVAIL_BRIDGE_API_URL, AVAIL_RPC_URL},
+    defaults::{AVAIL_BRIDGE_API_URL, AVAIL_RPC_URL, NOMOS_DA_RPC_URL},
     messages::{
         MSG_AVAIL_API_NODE_URL_PROMPT, MSG_AVAIL_API_TIMEOUT_MS, MSG_AVAIL_APP_ID_PROMPT,
         MSG_AVAIL_BRIDGE_API_URL_PROMPT, MSG_AVAIL_CLIENT_TYPE_PROMPT,
         MSG_AVAIL_FINALITY_STATE_PROMPT, MSG_AVAIL_GAS_RELAY_API_KEY_PROMPT,
         MSG_AVAIL_GAS_RELAY_API_URL_PROMPT, MSG_AVAIL_GAS_RELAY_MAX_RETRIES_PROMPT,
-        MSG_AVAIL_SEED_PHRASE_PROMPT, MSG_INVALID_URL_ERR, MSG_VALIDIUM_TYPE_PROMPT,
+        MSG_AVAIL_SEED_PHRASE_PROMPT, MSG_INVALID_URL_ERR, MSG_NOMOS_DA_APP_ID,
+        MSG_NOMOS_DA_RPC_PASSWORD, MSG_NOMOS_DA_RPC_URL, MSG_NOMOS_DA_RPC_USERNAME,
+        MSG_VALIDIUM_TYPE_PROMPT,
     },
 };
 
@@ -29,6 +32,7 @@ pub enum ValidiumTypeInternal {
     NoDA,
     Avail,
     EigenDA,
+    Nomos,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, EnumIter, Display, ValueEnum)]
@@ -42,6 +46,7 @@ pub enum ValidiumType {
     NoDA,
     Avail((AvailConfig, AvailSecrets)),
     EigenDA,
+    Nomos((NomosDaConfig, NomosSecrets)),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, EnumIter, Display, ValueEnum)]
@@ -133,6 +138,20 @@ impl ValidiumType {
                 };
 
                 ValidiumType::Avail((avail_config, avail_secrets))
+            }
+            ValidiumTypeInternal::Nomos => {
+                let nomos_config = NomosDaConfig {
+                    rpc: Prompt::new(MSG_NOMOS_DA_RPC_URL)
+                        .default(NOMOS_DA_RPC_URL.as_str())
+                        .validate_with(url_validator)
+                        .ask(),
+                    app_id: Prompt::new(MSG_NOMOS_DA_APP_ID).ask(),
+                };
+                let nomos_secrets = NomosSecrets {
+                    username: Prompt::new(MSG_NOMOS_DA_RPC_USERNAME).ask(),
+                    password: Prompt::new(MSG_NOMOS_DA_RPC_PASSWORD).ask(),
+                };
+                ValidiumType::Nomos((nomos_config, nomos_secrets))
             }
         }
     }

@@ -6,6 +6,7 @@ use zkstack_cli_common::db::DatabaseConfig;
 
 use crate::{
     da::AvailSecrets,
+    nomos_da::NomosSecrets,
     raw::{PatchedConfig, RawConfig},
 };
 
@@ -80,6 +81,9 @@ impl SecretsConfigPatch {
         self.0.insert_yaml("da.avail", secrets)
     }
 
+    pub fn set_nomos_secrets(&mut self, secrets: &NomosSecrets) -> anyhow::Result<()> {
+        self.0.insert_yaml("da.nomos", secrets)
+    }
     pub fn set_consensus_keys(&mut self, consensus_keys: RawConsensusKeys) -> anyhow::Result<()> {
         self.0
             .insert("consensus.validator_key", consensus_keys.validator)?;

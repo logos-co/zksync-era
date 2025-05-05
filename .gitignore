@@ -10,6 +10,7 @@
 node_modules
 *.log
 target
+**/target-analyzer/**
 a.out
 .gitconfig
 cobertura.xml

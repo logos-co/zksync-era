@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use serde_yaml::{Mapping, Value};
 use xshell::Shell;
 use zkstack_cli_common::yaml::merge_yaml;
 use zksync_basic_types::pubdata_da::PubdataSendingMode;
@@ -8,6 +9,7 @@ use zksync_basic_types::pubdata_da::PubdataSendingMode;
 use crate::{
     consensus::{ConsensusConfigPatch, ConsensusGenesisSpecs},
     da::AvailConfig,
+    nomos_da::NomosDaConfig,
     raw::{PatchedConfig, RawConfig},
     ChainConfig, ObjectStoreConfig, ObjectStoreMode,
 };
@@ -249,6 +251,14 @@ impl GeneralConfigPatch {
         self.0.insert_yaml("da_client.avail", client)
     }
 
+    pub fn set_nomos_client(&mut self, nomos_config: &NomosDaConfig) -> anyhow::Result<()> {
+        self.0.insert_yaml("da_client.nomos", nomos_config)
+    }
+
+    pub fn set_no_da_client(&mut self) -> anyhow::Result<()> {
+        self.0
+            .insert("da_client.no_da", Value::Mapping(Mapping::new()))
+    }
     fn set_object_store(&mut self, prefix: &str, config: &ObjectStoreConfig) -> anyhow::Result<()> {
         self.0
             .insert(&format!("{prefix}.max_retries"), config.max_retries)?;
